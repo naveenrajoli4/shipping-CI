@@ -1,12 +1,23 @@
-FROM node:18.19.1-alpine3.19
-EXPOSE 8080
-RUN addgroup -S roboshop && adduser -S roboshop -G roboshop
-WORKDIR /opt/server
-RUN chown roboshop:roboshop /opt/server
-USER roboshop
-COPY package.json /opt/server/
-COPY server.js /opt/server/
-RUN npm install
-CMD ["node", "server.js"]
+#Build
 
-# ok
+FROM maven AS build
+
+WORKDIR /opt/shipping
+
+COPY pom.xml /opt/shipping/
+RUN mvn dependency:resolve
+COPY src /opt/shipping/src/
+RUN mvn package
+
+#
+# Run
+#
+FROM openjdk:8-jre-alpine3.9
+
+EXPOSE 8080
+
+WORKDIR /opt/shipping
+
+COPY --from=build /opt/shipping/target/shipping-*.jar shipping.jar
+
+CMD [ "java", "-Xmn256m", "-Xmx768m", "-jar", "shipping.jar" ]
